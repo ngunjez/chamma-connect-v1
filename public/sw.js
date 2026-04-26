@@ -4,7 +4,6 @@ const STATIC = [
   '/dashboard',
   '/manifest.json',
   '/chamma.png',
-  '/chamma.png',
 ];
 
 self.addEventListener('install', e => {

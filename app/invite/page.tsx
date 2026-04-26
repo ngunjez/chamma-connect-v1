@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Users, ArrowRight } from "lucide-react";
@@ -9,7 +10,7 @@ import type { Chama } from "@/types";
 
 type State = "loading" | "found" | "already_member" | "invalid";
 
-export default function InvitePage() {
+function InviteContent() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -139,5 +140,21 @@ export default function InvitePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+        <div style={{
+          width: "2rem", height: "2rem", borderRadius: "50%",
+          border: "3px solid var(--brand)", borderTopColor: "transparent",
+          animation: "spin 0.8s linear infinite",
+        }} />
+      </div>
+    }>
+      <InviteContent />
+    </Suspense>
   );
 }
