@@ -6,7 +6,6 @@ import type {
   Goal,
 } from "@/types";
 
-// ─── Current User ─────────────────────────────────────────────────────────────
 
 export const MOCK_USER: User = {
   id: "usr_001",
@@ -17,7 +16,6 @@ export const MOCK_USER: User = {
   memberSince: "2024-01-15",
 };
 
-// ─── Chamas ───────────────────────────────────────────────────────────────────
 
 export const MOCK_CHAMAS: Chama[] = [
   {
@@ -138,7 +136,6 @@ export const MOCK_CHAMAS: Chama[] = [
   },
 ];
 
-// ─── Dashboard Stats ──────────────────────────────────────────────────────────
 
 export const MOCK_STATS: DashboardStats = {
   totalContributions: 32000,
@@ -146,7 +143,6 @@ export const MOCK_STATS: DashboardStats = {
   expenseAnalysis: 1200,
 };
 
-// ─── Transactions ─────────────────────────────────────────────────────────────
 
 export const MOCK_TRANSACTIONS: Transaction[] = [
   {
@@ -183,7 +179,6 @@ export const MOCK_TRANSACTIONS: Transaction[] = [
   },
 ];
 
-// ─── Goals ────────────────────────────────────────────────────────────────────
 
 export const MOCK_GOALS: Goal[] = [
   {

@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { use } from "react";
 import Link from "next/link";
-import { Plus, Users, CheckCircle, Clock, XCircle, UserPlus } from "lucide-react";
-import { MOCK_CHAMAS } from "@/lib/mockData";
-import { formatKES } from "@/lib/utils";
+import { notFound } from "next/navigation";
+import { useState } from "react";
+import {
+  ArrowLeft, Users, CheckCircle, Clock, XCircle,
+  TrendingUp, Wallet, FileText, Calendar, Phone,
+  Mail, Shield, UserPlus,
+} from "lucide-react";
+import { MOCK_CHAMAS, MOCK_TRANSACTIONS } from "@/lib/mockData";
+import { formatKES, relativeDate } from "@/lib/utils";
 import InviteModal from "@/components/chama/InviteModal";
-import type { ChamaStatus } from "@/types";
+import type { ChamaStatus, MemberRole } from "@/types";
 
 function StatusBadge({ status }: { status: ChamaStatus }) {
   const map = {
@@ -22,63 +28,183 @@ function StatusBadge({ status }: { status: ChamaStatus }) {
   );
 }
 
-export default function ChamasPage() {
-  const [inviteChama, setInviteChama] = useState<{ id: string; name: string } | null>(null);
+function RoleBadge({ role }: { role: MemberRole }) {
+  const map = {
+    admin: { label: "Admin", cls: "badge-red" },
+    treasurer: { label: "Treasurer", cls: "badge-green" },
+    secretary: { label: "Secretary", cls: "badge-blue" },
+    member: { label: "Member", cls: "" },
+  } as const;
+  const { label, cls } = map[role];
+  return <span className={`badge ${cls}`}>{label}</span>;
+}
 
-  const totalGroups = MOCK_CHAMAS.length;
-  const totalValue = MOCK_CHAMAS.reduce((s, c) => s + c.totalValue, 0);
-  const totalContributions = MOCK_CHAMAS.reduce((s, c) => s + c.totalContributions, 0);
-  const totalLoans = MOCK_CHAMAS.reduce((s, c) => s + c.activeLoans, 0);
-  const active = MOCK_CHAMAS.filter((c) => c.status === "active").length;
+type Tab = "overview" | "members" | "transactions" | "documents";
+
+export default function ChamaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const chama = MOCK_CHAMAS.find((c) => c.id === id);
+  if (!chama) notFound();
+
+  const [tab, setTab] = useState<Tab>("overview");
+  const [showInvite, setShowInvite] = useState(false);
+
+  const chamaTransactions = MOCK_TRANSACTIONS.filter(
+    (t) => t.chamaName === chama.name
+  );
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "members", label: `Members (${chama.members.length})` },
+    { key: "transactions", label: "Transactions" },
+    { key: "documents", label: "Documents" },
+  ];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
-        <div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, fontFamily: "var(--font-sora)", color: "var(--text-primary)" }}>
-            My Chamas
-          </h1>
-          <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
-            Manage and track your chama groups
-          </p>
-        </div>
-        <Link href="/chamas/create" className="btn btn-primary">
-          <Plus size={15} />
-          Create Chama
+      {/* Back + header */}
+      <div>
+        <Link
+          href="/chamas"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: "0.375rem",
+            fontSize: "0.8125rem", color: "var(--text-muted)", textDecoration: "none",
+            marginBottom: "1rem",
+          }}
+        >
+          <ArrowLeft size={14} /> Back to Chamas
         </Link>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <h1 style={{ fontSize: "1.5rem", fontWeight: 700, fontFamily: "var(--font-sora)", color: "var(--text-primary)" }}>
+                {chama.name}
+              </h1>
+              <StatusBadge status={chama.status} />
+            </div>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>{chama.description}</p>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              {chama.groupType} · Since {new Date(chama.createdAt).toLocaleDateString("en-KE", { month: "long", year: "numeric" })}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowInvite(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", flexShrink: 0 }}
+          >
+            <UserPlus size={15} /> Invite Member
+          </button>
+        </div>
       </div>
 
-      {/* Summary stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(12rem, 1fr))", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(11rem, 1fr))", gap: "1rem" }}>
         {[
-          { label: "Total Groups", value: String(totalGroups), icon: <Users size={18} /> },
-          { label: "Total Value", value: formatKES(totalValue), icon: "💰" },
-          { label: "Total Contributions", value: formatKES(totalContributions), icon: "📈" },
-          { label: "Active Loans", value: formatKES(totalLoans), icon: "🔴" },
+          { label: "Total Value", value: formatKES(chama.totalValue), icon: <Wallet size={16} /> },
+          { label: "Contributions", value: formatKES(chama.totalContributions), icon: <TrendingUp size={16} /> },
+          { label: "Active Loans", value: formatKES(chama.activeLoans), icon: "🔴" },
+          { label: "Members", value: String(chama.members.length), icon: <Users size={16} /> },
+          { label: "Min. Contribution", value: formatKES(chama.minimumContribution), icon: "📅" },
         ].map((s) => (
           <div key={s.label} className="card" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div>
               <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.25rem" }}>{s.label}</p>
-              <p style={{ fontSize: "1.375rem", fontWeight: 700, fontFamily: "var(--font-sora)" }}>{s.value}</p>
+              <p style={{ fontSize: "1.25rem", fontWeight: 700, fontFamily: "var(--font-sora)" }}>{s.value}</p>
             </div>
-            <span style={{ fontSize: "1.125rem" }}>{s.icon}</span>
+            <span style={{ fontSize: "1rem", color: "var(--brand)" }}>{s.icon}</span>
           </div>
         ))}
       </div>
 
-      {/* Table + sidebar */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 16rem", gap: "1rem", alignItems: "start" }}>
-        {/* Chama table */}
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 style={{ fontSize: "0.9375rem", fontWeight: 600 }}>Chama Performance</h2>
-            <input type="search" placeholder="Search Chamas…" className="input-base" style={{ width: "12rem", height: "2rem", fontSize: "0.8125rem" }} />
+      <div style={{ borderBottom: "1px solid var(--border)", display: "flex", gap: "0" }}>
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            style={{
+              padding: "0.625rem 1.25rem",
+              fontSize: "0.875rem",
+              fontWeight: tab === t.key ? 600 : 400,
+              color: tab === t.key ? "var(--brand)" : "var(--text-muted)",
+              background: "none",
+              border: "none",
+              borderBottom: tab === t.key ? "2px solid var(--brand)" : "2px solid transparent",
+              cursor: "pointer",
+              marginBottom: "-1px",
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Calendar size={15} style={{ color: "var(--brand)" }} /> Meeting Schedule
+            </h3>
+            {[
+              { label: "Day", value: chama.meetingDay ?? "—" },
+              { label: "Time", value: chama.meetingTime ?? "—" },
+              { label: "Communication", value: chama.communicationLink ? "WhatsApp Group" : "—" },
+            ].map((r) => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.375rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{r.label}</span>
+                <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>
+                  {r.label === "Communication" && chama.communicationLink
+                    ? <a href={chama.communicationLink} target="_blank" rel="noreferrer" style={{ color: "var(--info)", textDecoration: "none" }}>Open Link</a>
+                    : r.value}
+                </span>
+              </div>
+            ))}
           </div>
+
+          <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Wallet size={15} style={{ color: "var(--brand)" }} /> Payment Config
+            </h3>
+            {[
+              { label: "Method", value: chama.payment.method === "platform" ? "Via Platform" : "Direct M-Pesa" },
+              { label: chama.payment.method === "platform" ? "Paybill" : "Shortcode", value: chama.payment.destinationPaybill ?? chama.payment.shortcode ?? "—" },
+              { label: "Account No.", value: chama.payment.accountNumber ?? "—" },
+            ].map((r) => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.375rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
+                <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>{r.label}</span>
+                <span style={{ fontSize: "0.8125rem", fontWeight: 500 }}>{r.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card" style={{ gridColumn: "1 / -1" }}>
+            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.875rem" }}>Savings Progress</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8125rem", marginBottom: "0.5rem" }}>
+              <span style={{ color: "var(--text-muted)" }}>Contributions vs Total Value</span>
+              <span style={{ fontWeight: 600 }}>{Math.round((chama.totalContributions / chama.totalValue) * 100)}%</span>
+            </div>
+            <div style={{ height: "8px", background: "var(--border)", borderRadius: "99px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.round((chama.totalContributions / chama.totalValue) * 100)}%`,
+                background: "var(--brand)",
+                borderRadius: "99px",
+              }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              <span>{formatKES(chama.totalContributions)} contributed</span>
+              <span>{formatKES(chama.totalValue)} total value</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "members" && (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                {["Group Name", "No. of Members", "Status", "Actions"].map((h) => (
+                {["Member", "Contact", "Role", "Joined"].map((h) => (
                   <th key={h} style={{ padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-muted)" }}>
                     {h}
                   </th>
@@ -86,85 +212,120 @@ export default function ChamasPage() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_CHAMAS.map((c) => (
-                <tr key={c.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {chama.members.map((m) => (
+                <tr key={m.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                   <td style={{ padding: "0.875rem 1.25rem" }}>
-                    <p style={{ fontSize: "0.875rem", fontWeight: 500 }}>{c.name}</p>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>{c.groupType}</p>
-                  </td>
-                  <td style={{ padding: "0.875rem 1.25rem", fontSize: "0.875rem", fontWeight: 600 }}>
-                    {c.members.length}
-                  </td>
-                  <td style={{ padding: "0.875rem 1.25rem" }}>
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td style={{ padding: "0.875rem 1.25rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <Link
-                        href={`/chamas/${c.id}`}
-                        style={{ fontSize: "0.875rem", color: "var(--info)", textDecoration: "none" }}
-                      >
-                        View Details
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => setInviteChama({ id: c.id, name: c.name })}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.25rem",
-                          fontSize: "0.8125rem",
-                          color: "var(--brand)",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          padding: 0,
-                          fontWeight: 500,
-                        }}
-                      >
-                        <UserPlus size={13} />
-                        Invite
-                      </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
+                      <div style={{
+                        width: "2rem", height: "2rem", borderRadius: "50%",
+                        background: "var(--brand)", display: "flex", alignItems: "center",
+                        justifyContent: "center", fontSize: "0.75rem", fontWeight: 700,
+                        color: "#fff", flexShrink: 0,
+                      }}>
+                        {m.avatarInitials}
+                      </div>
+                      <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                        {m.firstName} {m.lastName}
+                      </span>
                     </div>
+                  </td>
+                  <td style={{ padding: "0.875rem 1.25rem" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                      <span style={{ fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--text-secondary)" }}>
+                        <Phone size={11} /> {m.phone}
+                      </span>
+                      <span style={{ fontSize: "0.8125rem", display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--text-muted)" }}>
+                        <Mail size={11} /> {m.email}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding: "0.875rem 1.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                      <Shield size={12} style={{ color: "var(--text-muted)" }} />
+                      <RoleBadge role={m.role} />
+                    </div>
+                  </td>
+                  <td style={{ padding: "0.875rem 1.25rem", fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                    {relativeDate(m.joinedAt)}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
 
-        {/* Status sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div className="card">
-            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.875rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <CheckCircle size={15} style={{ color: "var(--brand)" }} /> Status
-            </h3>
-            {[
-              { label: "Active Groups", value: active },
-              { label: "Pending Approvals", value: 0 },
-              { label: "Inactive Groups", value: MOCK_CHAMAS.length - active },
-            ].map((r) => (
-              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.5rem 0", borderBottom: "1px solid var(--border-subtle)" }}>
-                <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{r.label}</span>
-                <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>{r.value}</span>
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <h3 style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.875rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              🔄 Recent Activity
-            </h3>
-            <p style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>No recent activity</p>
-          </div>
+      {tab === "transactions" && (
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {chamaTransactions.length === 0 ? (
+            <p style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.875rem" }}>
+              No transactions yet for this chama.
+            </p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  {["Description", "Date", "Amount"].map((h) => (
+                    <th key={h} style={{ padding: "0.75rem 1.25rem", textAlign: "left", fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-muted)" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {chamaTransactions.map((t) => (
+                  <tr key={t.id} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "0.875rem 1.25rem", fontSize: "0.875rem" }}>{t.description}</td>
+                    <td style={{ padding: "0.875rem 1.25rem", fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                      {relativeDate(t.date)}
+                    </td>
+                    <td style={{ padding: "0.875rem 1.25rem" }}>
+                      <span style={{
+                        fontSize: "0.875rem", fontWeight: 600,
+                        color: t.type === "credit" ? "var(--brand)" : "var(--danger, #ef4444)",
+                      }}>
+                        {t.type === "credit" ? "+" : "−"}{formatKES(t.amount)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* QR Invite modal - triggered from table row */}
-      {inviteChama && (
+      {tab === "documents" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {chama.documents.length === 0 ? (
+            <div className="card" style={{ textAlign: "center", padding: "2rem" }}>
+              <FileText size={32} style={{ color: "var(--text-muted)", margin: "0 auto 0.75rem" }} />
+              <p style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>No documents uploaded yet.</p>
+            </div>
+          ) : (
+            chama.documents.map((doc) => (
+              <div key={doc.id} className="card" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-start" }}>
+                  <FileText size={20} style={{ color: "var(--brand)", flexShrink: 0, marginTop: "0.125rem" }} />
+                  <div>
+                    <p style={{ fontSize: "0.875rem", fontWeight: 600 }}>{doc.title}</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>{doc.type}</p>
+                    <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
+                      Uploaded {relativeDate(doc.uploadedAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {showInvite && (
         <InviteModal
-          chamaId={inviteChama.id}
-          chamaName={inviteChama.name}
-          onClose={() => setInviteChama(null)}
+          chamaId={chama.id}
+          chamaName={chama.name}
+          onClose={() => setShowInvite(false)}
         />
       )}
     </div>

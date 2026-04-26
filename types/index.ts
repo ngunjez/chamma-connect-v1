@@ -1,4 +1,3 @@
-// ─── Domain Types ────────────────────────────────────────────────────────────
 
 export type GroupType = "saving" | "welfare" | "investment" | "merry-go-round";
 export type PaymentMethod = "platform" | "direct";
@@ -29,10 +28,8 @@ export interface ChamaDocument {
 
 export interface PaymentConfig {
   method: PaymentMethod;
-  /** Platform method fields */
   destinationPaybill?: string;
   accountNumber?: string;
-  /** Direct method fields */
   consumerKey?: string;
   consumerSecret?: string;
   shortcode?: string;
@@ -58,7 +55,6 @@ export interface Chama {
   activeLoans: number;
 }
 
-// ─── Form Step Types ──────────────────────────────────────────────────────────
 
 export interface BasicInfoForm {
   name: string;
@@ -107,7 +103,6 @@ export interface CreateChamaState {
   members: MemberForm[];
 }
 
-// ─── Dashboard Types ──────────────────────────────────────────────────────────
 
 export interface DashboardStats {
   totalContributions: number;
@@ -132,7 +127,6 @@ export interface Goal {
   deadline: string;
 }
 
-// ─── Auth / User ─────────────────────────────────────────────────────────────
 
 export interface User {
   id: string;
