@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "ChamaConnect",
   },
   icons: {
-    apple: "chamma.png",
+    apple: "/chamma.png",
   },
 };
 
@@ -46,6 +46,15 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground antialiased">
         {children}
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+              });
+            }
+          `
+        }}/>
       </body>
     </html>
   );
