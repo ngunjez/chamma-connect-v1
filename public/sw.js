@@ -1,6 +1,5 @@
-const CACHE = 'chamaconnect-v1';
+const CACHE = 'chamaconnect-v2';
 const STATIC = [
-  '/',
   '/dashboard',
   '/manifest.json',
   '/chamma.png',
@@ -24,6 +23,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
